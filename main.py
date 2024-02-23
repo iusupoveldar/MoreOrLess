@@ -18,11 +18,11 @@ def main():
     for index, row in df.iterrows(): 
         img_name = row['Name'] + row['Condition']+".png"
         vid_name = row['Name'] + row['Condition']
-        vid_path = imager.create_rotating_breathing_video(image_path+img_name, output_path+vid_name) 
+        # vid_path = imager.create_rotating_breathing_video(image_path+img_name, output_path+vid_name) 
  
-        print(vid_path)
+        print(vid_name)
     
-    # imager.create_clip(video_fragment_path = vid_path, position = (50,100))
+    imager.create_clip(position = (50,100))
     
 
     

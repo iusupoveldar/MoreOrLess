@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import os
-from moviepy.editor import VideoFileClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageSequenceClip
 
 class Imager:
     def __init__(self):
@@ -82,25 +82,51 @@ class Imager:
         out.release()
         return output_path
 
-    def create_clip(self, duration = 10, fps = 30, font = '', 
-        background_path = 'assets\\base\\background.mp4', text = '', 
-        position = (50,100), video_fragment_path = '',
-        output_video_path = 'assets\\base\\out.mp4', font_size = 24):
-         
+    def create_clip(self, duration = 10, fps = 30, font = '', text = '', 
+        position = (50,100), font_size = 24):
+        
+        background_path = 'assets\\base\\background.mp4'
+        output_video_path = 'assets\\result\\out0.mp4'
+
         background_video = VideoFileClip(background_path)
 
-        # Load the video you've just created
-        overlay_video = VideoFileClip(video_fragment_path)
+        width, height = background_video.size
 
+        # Load the video you've just created 
+        image_folder = 'assets\\vids\\AK-47_Redline(Battle-Scarred)'  # e.g., '/path/to/images'
+        image_files = [f'{image_folder}/frame_{i:04d}.png' for i in range(299)]  # Adjust pattern as needed
+
+        # Create an image sequence clip
+        overlay_video = ImageSequenceClip(image_files, fps=30)
+ 
         # Set the position of the overlay video on the existing video (e.g., top middle)
         overlay_position = ('center', 'top')  # Adjust as needed
 
         # Overlay the video
-        final_video = CompositeVideoClip([background_video, overlay_video.set_position(overlay_position).set_start(0)], size=background_video.size)
+        final_video = CompositeVideoClip([background_video, overlay_video.set_position((-200,-275)), overlay_video.set_position((200,275))], size=background_video.size)
 
         # Write the result to a file 
         final_video.write_videofile(output_video_path, fps=background_video.fps)
         print("Done")
+
+    def get_folder_names(self, path):
+        """
+        Gets a list of folder names in the given path.
+
+        Args:
+            path: The path to the directory.
+
+        Returns:
+            A list of folder names.
+        """
+
+        # Get a list of all entries (files and directories)
+        entries = os.listdir(path)
+
+        # Filter out files and keep only directories
+        folder_names = [entry for entry in entries if os.path.isdir(os.path.join(path, entry))]
+
+        return folder_names
 
 
     
