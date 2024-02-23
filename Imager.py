@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+from moviepy.editor import VideoFileClip, CompositeVideoClip
 
 class Imager:
     def __init__(self):
@@ -45,3 +46,49 @@ class Imager:
         video.release()
         print(f"Video created: {output_path}")
         return output_path
+
+
+    def create_background(self, fps = 30, duration = 60, base_path = 'assets\\base\\', output_path = 'assets\\base\\background.mp4'):
+        if os.path.exists(base_path + 'background.mp4'):
+            print(f"Video already exists: {base_path + 'background.mp4'}")
+            return output_path
+        background_path = base_path + 'background.png'  # Path to your image 
+
+        # Read the image
+        image = cv2.imread(background_path)
+        image_height, image_width, _ = image.shape
+
+        # Define the codec and create VideoWriter object
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for .mp4
+        out = cv2.VideoWriter(output_path, fourcc, fps, (image_width, image_height))
+
+        # Add frames to the video
+        for i in range(duration * fps): 
+            out.write(image)
+
+        # Release everything when job is finished
+        out.release()
+        return output_path
+
+    def create_clip(self, duration = 10, fps = 30, font = '', 
+        background_path = 'assets\\base\\background.mp4', text = '', 
+        position = (50,100), video_fragment_path = '',
+        output_video_path = 'assets\\base\\out.mp4', font_size = 24):
+         
+        background_video = VideoFileClip(background_path)
+
+        # Load the video you've just created
+        overlay_video = VideoFileClip(video_fragment_path)
+
+        # Set the position of the overlay video on the existing video (e.g., top middle)
+        overlay_position = ('center', 'top')  # Adjust as needed
+
+        # Overlay the video
+        final_video = CompositeVideoClip([background_video, overlay_video.set_position(overlay_position).set_start(0)], size=background_video.size)
+
+        # Write the result to a file 
+        final_video.write_videofile(output_video_path, fps=background_video.fps)
+        print("Done")
+
+
+    
