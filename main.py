@@ -2,9 +2,10 @@ from Imager import Imager
 import pandas as pd
 import cv2
 from moviepy.editor import ImageClip, CompositeVideoClip
+from os.path import exists
 
  
-output_path = "assets\\vids\\"
+output_path = "assets\\vids\\raw\\"
 image_path = "assets\\img\\"
 base_path = "assets\\base\\"
 
@@ -18,11 +19,11 @@ def main():
     for index, row in df.iterrows(): 
         img_name = row['Name'] + row['Condition']+".png"
         vid_name = row['Name'] + row['Condition']
-        # vid_path = imager.create_rotating_breathing_video(image_path+img_name, output_path+vid_name) 
- 
-        print(vid_name)
-    
-    imager.create_clip(position = (50,100))
+        vid_path = imager.create_rotating_breathing_video(image_path+img_name, output_path+vid_name)   
+        if not exists(f'assets\\vids\\finished\\{vid_name}.mp4'):  
+            imager.create_clip(vid_name)
+        else:
+            print("file already exist")
     
 
     

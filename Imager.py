@@ -33,28 +33,26 @@ class Imager:
         return rotated_scaled
 
     def create_rotating_breathing_video(self, image_path, output_path, fps=30, duration=10, max_angle=10, start_scale=1.0, end_scale=1.2):
-        img = cv2.imread(image_path, -1) # Make sure to load the alpha channel
-        if img is None or img.shape[2] != 4:
-            print("Image doesn't have an alpha channel (4 channels), or can't be loaded.")
-            return
+        img = cv2.imread(image_path, -1) # Make sure to load the alpha channel 
         
         height, width = img.shape[:2]
         frame_count = duration * fps
         scale_diff = end_scale - start_scale
 
         if not os.path.exists(output_path):
-            os.makedirs(output_path)
+            os.makedirs(output_path) 
+            for frame in range(frame_count):
+                # Calculate current rotation angle and scale for breathing effect
+                angle = max_angle * np.sin(np.pi * 2 * frame / frame_count)
+                scale = start_scale + (scale_diff * np.sin(np.pi * 2 * frame / frame_count)) / 2
 
-        for frame in range(frame_count):
-            # Calculate current rotation angle and scale for breathing effect
-            angle = max_angle * np.sin(np.pi * 2 * frame / frame_count)
-            scale = start_scale + (scale_diff * np.sin(np.pi * 2 * frame / frame_count)) / 2
-
-            # Apply the rotation and scaling to the image
-            rotated_scaled_img = self.rotate_and_scale_image(img, angle, scale) 
-            # Save the frame as a PNG image
-            frame_file = os.path.join(output_path, f"frame_{frame:04d}.png")
-            cv2.imwrite(frame_file, rotated_scaled_img)
+                # Apply the rotation and scaling to the image
+                rotated_scaled_img = self.rotate_and_scale_image(img, angle, scale) 
+                # Save the frame as a PNG image
+                frame_file = os.path.join(output_path, f"frame_{frame:04d}.png")
+                cv2.imwrite(frame_file, rotated_scaled_img)
+        else:
+            print("Folder already exists")
         
         print(f"Frames saved to {output_path}")
         return output_path
@@ -82,31 +80,52 @@ class Imager:
         out.release()
         return output_path
 
-    def create_clip(self, duration = 10, fps = 30, font = '', text = '', 
-        position = (50,100), font_size = 24):
-        
-        background_path = 'assets\\base\\background.mp4'
-        output_video_path = 'assets\\result\\out0.mp4'
 
-        background_video = VideoFileClip(background_path)
+    # , duration = 10, fps = 30, font = '', text = '', position = (50,100), font_size = 24
+    def create_clips(self):
+        # background_path = 'assets\\base\\background.mp4'
 
-        width, height = background_video.size
+        # background_video = VideoFileClip(background_path)
+
+        # width, height = background_video.size
 
         # Load the video you've just created 
-        image_folder = 'assets\\vids\\AK-47_Redline(Battle-Scarred)'  # e.g., '/path/to/images'
-        image_files = [f'{image_folder}/frame_{i:04d}.png' for i in range(299)]  # Adjust pattern as needed
+        folder_list = [x[0] for x in os.walk('assets\\vids\\raw')][1::]
+        for index, folder in enumerate(folder_list): 
+            length_items = len(os.listdir(folder))
+            item_name = folder.split('\\')[-1]
+            image_files = [f'{folder}/frame_{i:04d}.png' for i in range(length_items)]  # Adjust pattern as needed
+
+            # Create an image sequence clip
+            overlay_video = ImageSequenceClip(image_files, fps=30)
+            
+            # Save the video
+            output_video_path = f'assets\\vids\\finished\\{item_name}.mp4'
+            overlay_video.write_videofile(output_video_path, fps=30)
+
+            # Set the position of the overlay video on the existing video (e.g., top middle)
+            # overlay_position = ('center', 'top')  # Adjust as needed
+
+            # output_video_path = f'assets\\result\\output{index}.mp4'
+            # # Overlay the video
+            # final_video = CompositeVideoClip([background_video, overlay_video.set_position((-200,-275)), overlay_video.set_position((-200,275))], size=background_video.size)
+
+            # # Write the result to a file 
+            # final_video.write_videofile(output_video_path, fps=background_video.fps)
+            print("Done")
+
+    def create_clip(self, filename):   
+        folder_name = f'assets\\vids\\raw\\{filename}'
+        length_items = len(os.listdir(folder_name))
+        item_name = folder_name.split('\\')[-1]
+        image_files = [f'{folder_name}/frame_{i:04d}.png' for i in range(length_items)]  # Adjust pattern as needed
 
         # Create an image sequence clip
         overlay_video = ImageSequenceClip(image_files, fps=30)
- 
-        # Set the position of the overlay video on the existing video (e.g., top middle)
-        overlay_position = ('center', 'top')  # Adjust as needed
-
-        # Overlay the video
-        final_video = CompositeVideoClip([background_video, overlay_video.set_position((-200,-275)), overlay_video.set_position((200,275))], size=background_video.size)
-
-        # Write the result to a file 
-        final_video.write_videofile(output_video_path, fps=background_video.fps)
+        
+        # Save the video
+        output_video_path = f'assets\\vids\\finished\\{item_name}.mp4'
+        overlay_video.write_videofile(output_video_path, fps=30) 
         print("Done")
 
     def get_folder_names(self, path):
