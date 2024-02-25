@@ -20,10 +20,8 @@ def main():
         img_name = row['Name'] + row['Condition']+".png"
         vid_name = row['Name'] + row['Condition']
         vid_path = imager.create_rotating_breathing_video(image_path+img_name, output_path+vid_name)   
-        if not exists(f'assets\\vids\\finished\\{vid_name}.mp4'):  
-            imager.create_clip(vid_name)
-        else:
-            print("file already exist")
+
+    imager.create_random_clip() 
     
 
     

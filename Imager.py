@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 import os
-from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageSequenceClip
+from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageSequenceClip, concatenate_videoclips, TextClip
+import random
+import uuid
+import pandas as pd
+from tiktokvoice import *
 
 class Imager:
     def __init__(self):
@@ -80,14 +84,97 @@ class Imager:
         out.release()
         return output_path
 
+    def create_tts(self, text):
+        pass
 
-    # , duration = 10, fps = 30, font = '', text = '', position = (50,100), font_size = 24
-    def create_clips(self):
-        # background_path = 'assets\\base\\background.mp4'
+    def create_clip_scene(self):
+        pass
 
-        # background_video = VideoFileClip(background_path)
+    def create_random_clip(self):
+        # Consolas-Bold
+        # Gadugi-Bold
+        font = 'Consolas-Bold'
+        df = pd.read_csv('items_list.csv')
+        df['NameEdit'] = df['Name'].str.replace(' | ', '_', regex=False)
+        df['comb'] = df['NameEdit'] + df['Condition']
+        background_path = 'assets\\base\\background.mp4'
 
-        # width, height = background_video.size
+        background_video = VideoFileClip(background_path).set_duration(10)
+
+        width, height = background_video.size
+        first_item_pos = (-200,-275) 
+        first_item_price_pos = ('center',700) 
+        first_item_name_pos = ('center',100) 
+        second_item_pos = (-200,775)
+        second_item_price_pos = ('center',1150) 
+        second_item_name_pos = ('center',1700) 
+
+        # Load the video you've just created 
+        videos = []
+        loops = 6
+        for i in range(loops): 
+            overlay_videos = []
+            overlay_prices = []
+            overlay_names = []
+            folder_list = self.get_folder_names('assets\\vids\\raw')
+            print("creating clips", i)
+            for index, folder in enumerate(folder_list): 
+                print(folder)
+                match = df[(df['comb'] == folder)]
+                print(f"this is the price i found {match['Price'].values[0]}")
+                folder_dir = f'assets\\vids\\raw\\{folder}'
+                length_items = len(os.listdir(folder_dir))
+                item_name = folder.split('\\')[-1]
+                image_files = [f'{folder_dir}/frame_{i:04d}.png' for i in range(length_items)]  # Adjust pattern as needed
+
+                # Create an image sequence clip
+                original_name_text = TextClip(f"{match['Name'].values[0].split(' | ')[0]}\n{match['Name'].values[0].split(' | ')[1]} {match['Condition'].values[0]}", fontsize=70, color='white', font=font).set_duration(10)
+                overlay_name_text = TextClip(f"{match['Name'].values[0].split(' | ')[0]}\n{match['Name'].values[0].split(' | ')[1]} {match['Condition'].values[0]}", fontsize=74, color='black', font=font).set_duration(10)
+                overlay_names.append(original_name_text)
+                # overlay_names.append(overlay_name_text)
+                original_price_text = TextClip(f"${match['Price'].values[0]}", fontsize=70, color='white', font=font).set_duration(5)
+                overlay_price_text = TextClip(f"${match['Price'].values[0]}", fontsize=74, color='black', font=font).set_duration(5)
+                overlay_prices.append(original_price_text)
+                # overlay_prices.append(overlay_price_text)
+                overlay_videos.append(ImageSequenceClip(image_files, fps=30)) 
+            
+            # Create outline clip of the "OR" text
+            or_clip_outline = TextClip(f"OR\n{i+1}/{loops}", fontsize=74, color='black', font=font).set_duration(10)
+            or_clip = TextClip(f"OR\n{i+1}/{loops}", fontsize=70, color='white', font=font).set_duration(10)
+            
+            # Set the position of the text clip to the center of the video
+            or_clip_outline = or_clip_outline.set_pos('center')
+            or_clip = or_clip.set_pos('center')
+
+            # item 1
+            clip1_image = overlay_videos[0].set_position(first_item_pos)
+            clip1_name = overlay_names[0].set_position(first_item_name_pos)
+            # clip1_name_out = overlay_names[1].set_position(first_item_name_pos)
+            clip1_price = overlay_prices[0].set_position(first_item_price_pos).set_start(5)
+            # clip1_price_out = overlay_prices[1].set_position(first_item_price_pos).set_start(5)
+
+            # item 2
+            clip2_image = overlay_videos[1].set_position(second_item_pos)
+            clip2_name = overlay_names[1].set_position(second_item_name_pos)
+            # clip2_name_out = overlay_names[3].set_position(second_item_name_pos)
+            clip2_price = overlay_prices[1].set_position(second_item_price_pos).set_start(5)
+            # clip2_price_out = overlay_prices[3].set_position(second_item_price_pos).set_start(5)
+
+            temp_vids = [background_video, clip1_image, clip1_name, clip1_price, clip2_image, clip2_name, clip2_price,or_clip_outline, or_clip]
+            clip = CompositeVideoClip(temp_vids, size=background_video.size)
+            clip.write_videofile(f'assets\\vids\\finished\\{uuid.uuid4()}.mp4', fps=30)
+            input()
+            # Overlay the video
+            videos.append(clip)
+
+            # Write the result to a file 
+        print("Done creating small clips")
+        output_video_path = f'assets\\vids\\finished\\{uuid.uuid4()}.mp4'  
+        final_video = concatenate_videoclips(videos)
+        final_video.write_videofile(output_video_path, fps=background_video.fps)
+        print("Done")
+ 
+    def create_clips(self): 
 
         # Load the video you've just created 
         folder_list = [x[0] for x in os.walk('assets\\vids\\raw')][1::]
@@ -103,16 +190,18 @@ class Imager:
             output_video_path = f'assets\\vids\\finished\\{item_name}.mp4'
             overlay_video.write_videofile(output_video_path, fps=30)
 
-            # Set the position of the overlay video on the existing video (e.g., top middle)
-            # overlay_position = ('center', 'top')  # Adjust as needed
-
-            # output_video_path = f'assets\\result\\output{index}.mp4'
-            # # Overlay the video
-            # final_video = CompositeVideoClip([background_video, overlay_video.set_position((-200,-275)), overlay_video.set_position((-200,275))], size=background_video.size)
-
-            # # Write the result to a file 
-            # final_video.write_videofile(output_video_path, fps=background_video.fps)
             print("Done")
+
+    # get price where it matches
+    def get_price(self, name, condition):
+        # Filter the dataframe based on the Name and Condition
+        
+        
+        # If there is a match, return the Price, else return None or a custom message
+        if not match.empty:
+            return match['Price'].values[0]
+        else:
+            return "No match found"
 
     def create_clip(self, filename):   
         folder_name = f'assets\\vids\\raw\\{filename}'
@@ -130,13 +219,13 @@ class Imager:
 
     def get_folder_names(self, path):
         """
-        Gets a list of folder names in the given path.
+        Gets two random folder names from the given path.
 
         Args:
             path: The path to the directory.
 
         Returns:
-            A list of folder names.
+            A list of two random folder names.
         """
 
         # Get a list of all entries (files and directories)
@@ -144,8 +233,8 @@ class Imager:
 
         # Filter out files and keep only directories
         folder_names = [entry for entry in entries if os.path.isdir(os.path.join(path, entry))]
-
-        return folder_names
+        # Return two random folder names, or all if there are less than two
+        return random.sample(folder_names, min(len(folder_names), 2))
 
 
     
