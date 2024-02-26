@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import os
-from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageSequenceClip, concatenate_videoclips, TextClip
+from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageSequenceClip, concatenate_videoclips, TextClip, AudioFileClip, concatenate_audioclips, ImageClip
 import random
 import uuid
 import pandas as pd
@@ -36,7 +36,7 @@ class Imager:
 
         return rotated_scaled
 
-    def create_rotating_breathing_video(self, image_path, output_path, fps=30, duration=10, max_angle=10, start_scale=1.0, end_scale=1.2):
+    def create_rotating_breathing_video(self, image_path, output_path, fps=30, duration=10, max_angle=10, start_scale=1.5, end_scale=1.8):
         img = cv2.imread(image_path, -1) # Make sure to load the alpha channel 
         
         height, width = img.shape[:2]
@@ -85,10 +85,15 @@ class Imager:
         return output_path
 
     def create_tts(self, text):
-        pass
-
-    def create_clip_scene(self):
-        pass
+        tts_path = f'assets\\tts\\{text}.mp3'
+        if (os.path.exists(tts_path)):
+            return AudioFileClip(tts_path)
+        else:
+            # en_male_narration, slow, maybe something faster?
+            # en_us_006 is okay
+            tts(text, voice = 'en_us_006', filename = tts_path, play_sound = False)
+            return AudioFileClip(tts_path)
+ 
 
     def create_random_clip(self):
         # Consolas-Bold
@@ -116,62 +121,91 @@ class Imager:
             overlay_videos = []
             overlay_prices = []
             overlay_names = []
+            audio_clips = []
+            audio = ""
             folder_list = self.get_folder_names('assets\\vids\\raw')
             print("creating clips", i)
             for index, folder in enumerate(folder_list): 
                 print(folder)
-                match = df[(df['comb'] == folder)]
-                print(f"this is the price i found {match['Price'].values[0]}")
+                match = df[(df['comb'] == folder)] 
                 folder_dir = f'assets\\vids\\raw\\{folder}'
                 length_items = len(os.listdir(folder_dir))
                 item_name = folder.split('\\')[-1]
                 image_files = [f'{folder_dir}/frame_{i:04d}.png' for i in range(length_items)]  # Adjust pattern as needed
+                
+                gun = match['Name'].values[0].split(' | ')
+                gun_type = gun[0]
+                gun_name = gun[1]
+                gun_codition = match['Condition'].values[0]
+                gun_price = match['Price'].values[0]
+
+                if (index == 0):  
+                    audio = "What cost more " + gun_type + " " +  gun_name + gun_codition + " or " 
+                else:   
+                    audio += gun_type + " " +  gun_name + gun_codition + "  "
 
                 # Create an image sequence clip
-                original_name_text = TextClip(f"{match['Name'].values[0].split(' | ')[0]}\n{match['Name'].values[0].split(' | ')[1]} {match['Condition'].values[0]}", fontsize=70, color='white', font=font).set_duration(10)
-                overlay_name_text = TextClip(f"{match['Name'].values[0].split(' | ')[0]}\n{match['Name'].values[0].split(' | ')[1]} {match['Condition'].values[0]}", fontsize=74, color='black', font=font).set_duration(10)
-                overlay_names.append(original_name_text)
-                # overlay_names.append(overlay_name_text)
-                original_price_text = TextClip(f"${match['Price'].values[0]}", fontsize=70, color='white', font=font).set_duration(5)
-                overlay_price_text = TextClip(f"${match['Price'].values[0]}", fontsize=74, color='black', font=font).set_duration(5)
-                overlay_prices.append(original_price_text)
-                # overlay_prices.append(overlay_price_text)
+                original_name_text = TextClip(f"{gun_type}\n{gun_name} {gun_codition}", fontsize=60, color='white', font=font).set_duration(10)
+                overlay_names.append(original_name_text) 
+                original_price_text = TextClip(f"${gun_price}", fontsize=70, color='white', font=font).set_duration(1) 
+                overlay_prices.append(original_price_text) 
                 overlay_videos.append(ImageSequenceClip(image_files, fps=30)) 
             
-            # Create outline clip of the "OR" text
-            or_clip_outline = TextClip(f"OR\n{i+1}/{loops}", fontsize=74, color='black', font=font).set_duration(10)
+
+            clip_audio = self.create_tts(audio)
+            voice_duration = clip_audio.duration
+            start_point_ending = 10 - voice_duration
+            # create the audio file ending
+            ending = AudioFileClip('assets\\base\\tiktok_ending_sound.mp3')
+            ending_duration = ending.duration   
+            if (ending_duration > start_point_ending):
+                ending = ending.subclip(ending_duration-start_point_ending)
+
+            audio_clips.extend([clip_audio, ending])
+
+            # Create outline clip of the "OR" text 
             or_clip = TextClip(f"OR\n{i+1}/{loops}", fontsize=70, color='white', font=font).set_duration(10)
-            
-            # Set the position of the text clip to the center of the video
-            or_clip_outline = or_clip_outline.set_pos('center')
+            # Set the position of the text clip to the center of the video 
             or_clip = or_clip.set_pos('center')
 
             # item 1
             clip1_image = overlay_videos[0].set_position(first_item_pos)
-            clip1_name = overlay_names[0].set_position(first_item_name_pos)
-            # clip1_name_out = overlay_names[1].set_position(first_item_name_pos)
-            clip1_price = overlay_prices[0].set_position(first_item_price_pos).set_start(5)
-            # clip1_price_out = overlay_prices[1].set_position(first_item_price_pos).set_start(5)
+            clip1_name = overlay_names[0].set_position(first_item_name_pos) 
+            clip1_price = overlay_prices[0].set_position(first_item_price_pos).set_start(9) 
 
             # item 2
             clip2_image = overlay_videos[1].set_position(second_item_pos)
-            clip2_name = overlay_names[1].set_position(second_item_name_pos)
-            # clip2_name_out = overlay_names[3].set_position(second_item_name_pos)
-            clip2_price = overlay_prices[1].set_position(second_item_price_pos).set_start(5)
-            # clip2_price_out = overlay_prices[3].set_position(second_item_price_pos).set_start(5)
+            clip2_name = overlay_names[1].set_position(second_item_name_pos) 
+            clip2_price = overlay_prices[1].set_position(second_item_price_pos).set_start(9) 
+            
+            # item 1 audio
+            clips_audio = concatenate_audioclips(audio_clips)
 
-            temp_vids = [background_video, clip1_image, clip1_name, clip1_price, clip2_image, clip2_name, clip2_price,or_clip_outline, or_clip]
+
+            # twitch banner with opacity
+            twitch_clip = ImageClip('assets\\base\\twitch_banner.png')
+            twitch_clip = twitch_clip.set_duration(10).set_opacity(0.5).resize(0.15).set_position('left', 'center')
+
+            temp_vids = [background_video, clip1_image, clip1_name, clip1_price, clip2_image, clip2_name, clip2_price, or_clip, twitch_clip]
             clip = CompositeVideoClip(temp_vids, size=background_video.size)
-            clip.write_videofile(f'assets\\vids\\finished\\{uuid.uuid4()}.mp4', fps=30)
-            input()
+            # Set the audio to the video clip starting at the specific time
+            clip = clip.set_audio(clips_audio)
+
+            clip.write_videofile(f'assets\\vids\\finished\\{str(i)}.mp4', fps=30, codec='libx264', audio_codec='aac')
+            # input()
             # Overlay the video
-            videos.append(clip)
+            # videos.append(clip)
 
             # Write the result to a file 
         print("Done creating small clips")
-        output_video_path = f'assets\\vids\\finished\\{uuid.uuid4()}.mp4'  
-        final_video = concatenate_videoclips(videos)
-        final_video.write_videofile(output_video_path, fps=background_video.fps)
+        path_to_vids = 'assets\\vids\\finished'
+        video_files = [f for f in os.listdir(path_to_vids) if f.endswith('.mp4')]
+        video_files.sort()
+        clips = [VideoFileClip(os.path.join(path_to_vids, filename)) for filename in video_files]
+        final_clip = concatenate_videoclips(clips)
+
+        output_path = f'assets\\vids\\{uuid.uuid4()}.mp4'
+        final_clip.write_videofile(output_path, codec='libx264', audio_codec='aac') 
         print("Done")
  
     def create_clips(self): 
