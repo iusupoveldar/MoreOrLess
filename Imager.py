@@ -100,9 +100,12 @@ class Imager:
         # Gadugi-Bold
         font = 'Consolas-Bold'
         df = pd.read_csv('items_list.csv')
+        df = df.fillna("NA")
         df['NameEdit'] = df['Name'].str.replace(' | ', '_', regex=False)
         df['comb'] = df['NameEdit'] + df['Condition']
         background_path = 'assets\\base\\background.mp4'
+        
+        price_duration = AudioFileClip("assets\\base\\ending_sound.mp3").duration
 
         background_video = VideoFileClip(background_path).set_duration(10)
 
@@ -127,16 +130,27 @@ class Imager:
             print("creating clips", i)
             for index, folder in enumerate(folder_list): 
                 print(folder)
-                match = df[(df['comb'] == folder)] 
+                match = df[(df['comb'].str.strip() == folder)] 
                 folder_dir = f'assets\\vids\\raw\\{folder}'
                 length_items = len(os.listdir(folder_dir))
                 item_name = folder.split('\\')[-1]
                 image_files = [f'{folder_dir}/frame_{i:04d}.png' for i in range(length_items)]  # Adjust pattern as needed
                 
-                gun = match['Name'].values[0].split(' | ')
-                gun_type = gun[0]
-                gun_name = gun[1]
+                # print(match)
+                gun_name = ''
+                gun_type = ''
+                if ("|" in match['Name'].values[0]):
+                    gun = match['Name'].values[0].split(' | ')
+                    gun_type = gun[0]
+                    gun_name = gun[1]
+                else:
+                    gun = match['Name'].values[0]
+                    gun_type = gun
                 gun_codition = match['Condition'].values[0]
+
+                if gun_codition == "NA":
+                    gun_codition = ""
+
                 gun_price = match['Price'].values[0]
 
                 if (index == 0):  
@@ -147,21 +161,23 @@ class Imager:
                 # Create an image sequence clip
                 original_name_text = TextClip(f"{gun_type}\n{gun_name} {gun_codition}", fontsize=60, color='white', font=font).set_duration(10)
                 overlay_names.append(original_name_text) 
-                original_price_text = TextClip(f"${gun_price}", fontsize=70, color='white', font=font).set_duration(1) 
+                original_price_text = TextClip(f"${gun_price}", fontsize=70, color='white', font=font).set_duration(price_duration) 
                 overlay_prices.append(original_price_text) 
                 overlay_videos.append(ImageSequenceClip(image_files, fps=30)) 
             
 
             clip_audio = self.create_tts(audio)
             voice_duration = clip_audio.duration
-            start_point_ending = 10 - voice_duration
+            start_point_ending = 10 - voice_duration + 0.15
             # create the audio file ending
-            ending = AudioFileClip('assets\\base\\tiktok_ending_sound.mp3')
-            ending_duration = ending.duration   
-            if (ending_duration > start_point_ending):
-                ending = ending.subclip(ending_duration-start_point_ending)
+            ticking_sound = AudioFileClip("assets\\base\\ticking_sound.mp3")
+            ending_sound = AudioFileClip("assets\\base\\ending_sound.mp3")
+            ending_sound_duration = ending_sound.duration   
+            ticking_sound_duration = ticking_sound.duration
+            ticking_duration = 10 - clip_audio.duration - ending_sound.duration - 0.1
+            ticking_sound = ticking_sound.subclip(round(ticking_duration,2))
 
-            audio_clips.extend([clip_audio, ending])
+            audio_clips.extend([clip_audio, ticking_sound, ending_sound])
 
             # Create outline clip of the "OR" text 
             or_clip = TextClip(f"OR\n{i+1}/{loops}", fontsize=70, color='white', font=font).set_duration(10)
@@ -171,12 +187,12 @@ class Imager:
             # item 1
             clip1_image = overlay_videos[0].set_position(first_item_pos)
             clip1_name = overlay_names[0].set_position(first_item_name_pos) 
-            clip1_price = overlay_prices[0].set_position(first_item_price_pos).set_start(9) 
+            clip1_price = overlay_prices[0].set_position(first_item_price_pos).set_start(10 - price_duration) 
 
             # item 2
             clip2_image = overlay_videos[1].set_position(second_item_pos)
             clip2_name = overlay_names[1].set_position(second_item_name_pos) 
-            clip2_price = overlay_prices[1].set_position(second_item_price_pos).set_start(9) 
+            clip2_price = overlay_prices[1].set_position(second_item_price_pos).set_start(10 - price_duration) 
             
             # item 1 audio
             clips_audio = concatenate_audioclips(audio_clips)
@@ -186,7 +202,7 @@ class Imager:
             twitch_clip = ImageClip('assets\\base\\twitch_banner.png')
             twitch_clip = twitch_clip.set_duration(10).set_opacity(0.5).resize(0.15).set_position('left', 'center')
 
-            temp_vids = [background_video, clip1_image, clip1_name, clip1_price, clip2_image, clip2_name, clip2_price, or_clip, twitch_clip]
+            temp_vids = [background_video, clip1_name, clip1_price, clip2_name, clip2_price, or_clip, twitch_clip, clip2_image, clip1_image]
             clip = CompositeVideoClip(temp_vids, size=background_video.size)
             # Set the audio to the video clip starting at the specific time
             clip = clip.set_audio(clips_audio)

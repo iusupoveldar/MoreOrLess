@@ -16,6 +16,7 @@ def main():
     background_path = imager.create_background()
     print(background_path)
     df['Name'] = df['Name'].str.replace(' | ', '_', regex=False)
+    df = df.fillna("NA")
     for index, row in df.iterrows(): 
         img_name = row['Name'] + row['Condition']+".png"
         vid_name = row['Name'] + row['Condition']
