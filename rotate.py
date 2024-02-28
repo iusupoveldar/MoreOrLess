@@ -23,7 +23,6 @@ def create_rotating_video(image_path, output_path, fps=60, duration=10, max_angl
     half_frames = frames // 2
     angle_step = max_angle / half_frames
     
-    for frame in range(frames):
         if frame <= half_frames:
             angle = angle_step * frame
         else:
